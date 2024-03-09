@@ -1,0 +1,51 @@
+LMPP6	4
+#	lmpwork Pattern File
+
+T	OPTION
+C	Layout	ExportScript	FrameRate	ExpDataComp	ExpFileName	ExpPathName	Brightness	LayoutID	LayoutRevID
+0	Unicorn.lmpl6r		30	True			100	660b8663c78346d19a326458f155e62e	68c5e516bea64bac9bd8317f30c51a9b
+
+T	PATTERN
+C	Label	Priority	Duration	DurationFrame	Path	FrameRate	Repeat	Grid	DoExport	Description	AutoDuration	UniqueID
+
+T	MOVIE
+C	Pattern	StartTime	Duration	Loop	Path
+
+T	SOUND
+C	Pattern	StartTime	Duration	Path
+
+T	LAYER
+C	Pattern	LedId	GroupName	Visible	Lock
+
+T	CLIP
+C	Layer	StartTime	Duration	RepeatDuration	RepeatType	KeyFrames
+
+T	GUIDE
+C	Pattern	Time
+
+T	SEQUENCE
+C	Label	Priority	Duration	FrameRate	Repeat	Grid	DoExport	Description	FrameMode	AutoDuration	UniqueID
+
+T	TRACK
+C	Sequence	Name	Visible	Lock
+
+T	PTN_CLIP
+C	Track	Pattern	StartTime	Duration	RepeatDuration	RepeatType	UniqueID
+
+T	SEQ_MOVIE
+C	Sequence	StartTime	Duration	Loop	Path
+
+T	SEQ_SOUND
+C	Sequence	StartTime	Duration	Path
+
+T	SEQ_GUIDE
+C	Sequence	Time
+
+T	SEQ_LOOPSTART
+C	Sequence	Time
+
+T	NEXTUNIQUEID
+C	Type	NextID
+0	PATTERN	0
+1	SEQUENCE	0
+2	PTN_CLIP	0
