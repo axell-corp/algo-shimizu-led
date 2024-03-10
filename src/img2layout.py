@@ -44,14 +44,12 @@ layout_data = parse_lmp(layout_list)
 pattern_data = parse_lmp(empty_pattern_list)
 
 led = layout_data["LAMP"].merge(layout_data["KINDPOSTFIX"], on="Kind")
-led_names: list[str] = []
-
-for i, row in led.iterrows():
-    led_names.append(row["LabelBase"] + row["Postfix"])
 
 pattern_data["PATTERN"].loc[0] = [0, "BASE", 0, 1000, 0, "", 60, -1, 500, "TRUE", "test pattern", "FALSE", 0]
-for i, n in enumerate(led_names):
-    pattern_data["LAYER"].loc[i] = [i, 0, n, "", "TRUE", "FALSE"]
+for i, row in led.iterrows():
+    led_name = row["LabelBase"] + row["Postfix"]
+    pattern_data["LAYER"].loc[i] = [i, 0, led_name, "", "TRUE", "FALSE"]
+    pattern_data["CLIP"].loc[i] = [i * 2, i, 0, 3000, 3000, 2, "0,255;3000,0;"]
 
 output_file = open("./output.lmp6r", "w", encoding="shift-jis", newline="\n")
 output_data = export_lmp6r(pattern_data)
