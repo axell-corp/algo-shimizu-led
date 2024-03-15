@@ -46,21 +46,30 @@ pattern_data = parse_lmp(empty_pattern_list)
 led = layout_data["LAMP"].merge(layout_data["KINDPOSTFIX"], on="Kind")
 
 pattern_data["PATTERN"].loc[0] = [0, "BASE", 0, 1000, 0, "", 60, -1, 500, "TRUE", "test pattern", "FALSE", 0]
-unicorn_img = cv2.imread("../data/data.png")
+unicorn_video = cv2.VideoCapture("../data/dataset.mp4")
+start_time: int = 75 * 1000
+end_time: int = 80 * 1000
+duration = end_time - start_time
 for i, row in led.iterrows():
-    pixel = unicorn_img[int(row["Y"]), int(row["X"])]
-    value = 0
-    if row["Postfix"] == "_B":
-        value = pixel[0]
-    if row["Postfix"] == "_G":
-        value = pixel[1]
-    if row["Postfix"] == "_R":
-        value = pixel[2]
-    if row["Postfix"] == "_A":
-        value = 255
     led_name = row["LabelBase"] + row["Postfix"]
     pattern_data["LAYER"].loc[i] = [i, 0, led_name, "", "TRUE", "FALSE"]
-    pattern_data["CLIP"].loc[i] = [i * 2, i, 0, 3000, 3000, 2, "0,{};3000,{};".format(value, value)]
+    pattern_data["CLIP"].loc[i] = [i * 2, i, 0, duration, duration, 2, ""]
+for time in range(0, duration, 10):
+    print(time)
+    unicorn_video.set(cv2.CAP_PROP_POS_MSEC, start_time + time)
+    _, unicorn_frame = unicorn_video.read()
+    for i, row in led.iterrows():
+        pixel = unicorn_frame[int(row["Y"]), int(row["X"])]
+        value = 0
+        if row["Postfix"] == "_B":
+            value = pixel[0]
+        if row["Postfix"] == "_G":
+            value = pixel[1]
+        if row["Postfix"] == "_R":
+            value = pixel[2]
+        if row["Postfix"] == "_A":
+            value = 255
+        pattern_data["CLIP"].iat[i, 6] += "{},{};".format(time, value)
 
 output_file = open("./output.lmp6r", "w", encoding="shift-jis", newline="\n")
 output_data = export_lmp6r(pattern_data)
