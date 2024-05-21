@@ -36,16 +36,14 @@ def make_led_lcd(videofile_name: str, layout_data: dict[str, pd.DataFrame], data
     pixel_min[3] = 0
     # 60fps->30fps
     frame_len = int((video.get(cv2.CAP_PROP_FRAME_COUNT) + 1) / 2)
-    print(frame_len)
-    print(video.get(cv2.CAP_PROP_FRAME_COUNT))
     led_df = layout_data["LAMP"].merge(layout_data["KINDPOSTFIX"], on="Kind").query("Postfix != '_A'")
     clip_data = np.zeros((len(led_df), frame_len), dtype=np.int32)
     for frame_idx in range(0, frame_len):
         # 60fps->30fps
         video.set(cv2.CAP_PROP_POS_FRAMES, frame_idx * 2)
         _, frame = video.read()
-        lcd_frame = frame.copy()
-        lcd_video_writer.write(lcd_frame[lcd_tl[1]:lcd_br[1], lcd_tl[0]:lcd_br[0], :])
+        lcd_frame = frame.copy()[lcd_tl[1]:lcd_br[1], lcd_tl[0]:lcd_br[0], :]
+        lcd_video_writer.write(lcd_frame)
         
         def add_keyframe(i, row):
             value = liblmp.mean_sample_led(frame, int(row["X"]), int(row["Y"]), row["Postfix"])
