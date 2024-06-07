@@ -33,7 +33,7 @@ parser.add_argument("dataset_path")
 parser.add_argument("output_path")
 args = parser.parse_args()
 n_frames = 10
-train_data_num = 10
+train_data_num = 14
 
 first_led, first_spec, first_lcd = load_dataset(args.dataset_path, 1)
 _, lcd_height, lcd_width, _ = first_lcd.shape
@@ -47,7 +47,7 @@ led_t_train = torch.zeros((0, n_leds))
 first_led, first_spec, first_lcd = None, None, None
 
 
-def make_input(led: torch.Tensor, spec: torch.Tensor, lcd :torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+def make_input(led: torch.Tensor, spec: torch.Tensor, lcd :torch.Tensor, frame_len: int) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     sample_len = frame_len - n_frames
     led_t = torch.zeros((sample_len, n_frames - 1, led.shape[1]))
     spec_t = torch.zeros((sample_len, n_frames, spec.shape[1]))
@@ -68,7 +68,7 @@ for i in range(1, train_data_num + 1):
     frame_len = led.shape[0]
     sample_len = frame_len - n_frames
 
-    led_t, spec_t, lcd_t = make_input(led, spec, lcd)
+    led_t, spec_t, lcd_t = make_input(led, spec, lcd, frame_len)
     led_t_t = led[n_frames:n_frames + sample_len].cuda()
 
     led_train = torch.cat([led_train, led_t], 0)
@@ -97,10 +97,12 @@ class Net(nn.Module):
         self.c3 = nn.Conv3d(4, 1, (3, 3, 1), (2, 2, 1))
         self.c4 = nn.Conv3d(1, 1, (3, 3, 1), (2, 2, 1))
         #self.lstm = nn.LSTM(input_size=583, hidden_size=64, batch_first=True)
-        self.lstm = nn.LSTM(input_size=267, hidden_size=267, batch_first=True)
+        self.lin0 = nn.Linear(450, 450)
+        self.lstm = nn.LSTM(input_size=450, hidden_size=267, batch_first=True)
         self.lin = nn.Linear(267, 267)
-        self.lin0 = nn.Linear(450, 267)
         self.relu = nn.ReLU()
+        self.norm = nn.LayerNorm(450)
+        self.norm2 = nn.LayerNorm(267)
     
     def forward(self, led, spec, lcd):
         cled = self.c1_1(led)
@@ -111,9 +113,14 @@ class Net(nn.Module):
         yspec = torch.reshape(cspec, cspec.shape[:1] + (-1,))
         yled = torch.reshape(cled, cled.shape[:1] + (-1,))
         y = torch.cat([ylcd, yspec], 1)
-        y = self.lin0(y)
-        y, h = self.lstm(y, None)
         y = self.relu(y)
+        y = self.lin0(y)
+        y = self.norm(y)
+        y, h = self.lstm(y, None)
+        y = self.norm2(y)
+        y = self.relu(y)
+        y = self.lin(y)
+        y = self.norm2(y)
         y = self.lin(y)
         return y
 
@@ -124,7 +131,7 @@ print(net)
 loss_fnc = nn.MSELoss()
 optimizer = optim.SGD(net.parameters(), lr=0.01)
 record_loss_train = []
-epochs = 200
+epochs = 300
 for i in range(epochs):
     net.train()
     loss_train = 0
@@ -140,18 +147,21 @@ for i in range(epochs):
     record_loss_train.append(loss_train)
     print("epoch:\t{}\tloss_train={}".format(i, loss))
 
-test_id = 17
-test_led, test_spec, test_lcd = make_input(*load_dataset(args.dataset_path, test_id))
-net.eval()
-output: torch.Tensor = net(test_led, test_spec, test_lcd)
-np.savetxt("output.csv", output.cpu().detach().numpy(), fmt="%d")
+# test_id = 17
+# test_led, test_spec, test_lcd = load_dataset(args.dataset_path, test_id)
+# test_led, test_spec, test_lcd = make_input(test_led, test_spec, test_lcd, test_led.shape[0])
+# 
+# net.eval()
+# output: torch.Tensor = net(test_led, test_spec, test_lcd)
+# np.savetxt("output.csv", output.cpu().detach().numpy(), fmt="%d")
 
 # Export the model   
 torch.onnx.export(net,         # model being run 
         (torch.zeros(1, n_frames - 1, n_leds).cuda(), torch.zeros(1, n_frames, n_spec).cuda(), torch.zeros(1, n_frames, lcd_fixed_shape[0], lcd_fixed_shape[1], 3).cuda()),       # model input (or a tuple for multiple inputs) 
-        "Network.onnx",       # where to save the model  
+        "output.onnx",       # where to save the model  
         export_params=True,  # store the trained parameter weights inside the model file 
         opset_version=11,    # the ONNX version to export the model to 
         do_constant_folding=True,  # whether to execute constant folding for optimization 
-        input_names = ['input'],   # the model's input names 
-        output_names = ['output']) # the model's output names 
+        input_names = ['led', 'spec', 'lcd'],   # the model's input names 
+        output_names = ['output'],
+        dynamic_axes={'spec': {0: 'batch_size'}, 'lcd': {0: 'batch_size'}})
