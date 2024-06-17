@@ -43,9 +43,14 @@ def sample_led(pixel: any, postfix: str) -> int:
     return int(value)
 
 def mean_sample_led(frame: cv2.typing.MatLike, x: int, y: int, postfix: str) -> int:
-    pixel_delta = [(0, 0), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
+    d = 4
     pixel = np.zeros((3))
-    for d in pixel_delta:
-        pixel += frame[y + d[0], x + d[1]]
-    pixel /= 9
+    coeff_sum = 0
+    for dx in range(-d, d + 1):
+        for dy in range(-d, d + 1):
+            distance = np.sqrt((dx ** 2) + (dy ** 2))
+            coeff = 1 / np.sqrt(2 * np.pi) * np.exp(- (distance ** 2) / 2)
+            pixel += frame[y + dy, x + dx] * coeff
+            coeff_sum += coeff
+    pixel /= coeff_sum
     return sample_led(pixel, postfix)
